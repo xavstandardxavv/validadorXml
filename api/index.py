@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import tempfile, os, io, uuid
-from Validador.validadorXml.app import ValidadorFiscal
+from validadorXml.app import ValidadorFiscal
 import xml.etree.ElementTree as ET
 import shutil
 
