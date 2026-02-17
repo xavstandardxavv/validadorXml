@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
@@ -31,7 +31,7 @@ validator = ValidadorFiscal()
 
 @app.route('/')
 def home():
-    return "API rodando 🚀"
+    return render_template('index.html')
 
 @app.route('/validar', methods=['POST'])
 def validar():
