@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import tempfile, os, io, uuid
-from app import ValidadorFiscal
+from Validador.validadorXml.app import ValidadorFiscal
 import xml.etree.ElementTree as ET
 import shutil
 
@@ -142,6 +142,3 @@ def download(key):
         return 'ID não encontrado', 404
     bio = build_excel_bytes(notas)
     return send_file(bio, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='notas.xlsx')
-
-if __name__ == '__main__':
-    app.run(port=5001, debug=True)
