@@ -16,46 +16,56 @@ def index():
 
 @app.route('/validate', methods=['POST'])
 def validate():
-    tipo = request.form.get('tipo', 'NF-e')
-    files = request.files.getlist('files')
-    if not files:
-        return jsonify({'error':'Nenhum arquivo enviado'}), 400
-
-    tmpdir = tempfile.mkdtemp(prefix='val_')
-    paths = []
-    for f in files:
-        # some browsers send directories with full path, we just save
-        filename = os.path.basename(f.filename) or str(uuid.uuid4()) + '.xml'
-        dest = os.path.join(tmpdir, filename)
-        f.save(dest)
-        paths.append(dest)
-
-    validator = ValidadorFiscal()
-    events_index = validator.build_events_index(paths)
-
-    notas = []
-    for p in paths:
-        try:
-            tree = ET.parse(p)
-            root = tree.getroot()
-            is_nota = any(validator.limpar_tag(el.tag).lower() == 'infnfe' for el in root.iter())
-            if is_nota:
-                dados = validator.extrair_dados_xml(p, tipo, events_index=events_index)
-                notas.append(dados)
-        except Exception:
-            continue
-
-    # store and return id
-    key = str(uuid.uuid4())
-    STORE[key] = notas
-
-    # cleanup files
     try:
-        shutil.rmtree(tmpdir)
-    except:
-        pass
+        tipo = request.form.get('tipo', 'NF-e')
+        files = request.files.getlist('files')
+        if not files:
+            app.logger.warning('Nenhum arquivo enviado na requisição')
+            return jsonify({'error':'Nenhum arquivo enviado'}), 400
 
-    return jsonify({'id': key, 'count': len(notas), 'notas': notas})
+        tmpdir = tempfile.mkdtemp(prefix='val_')
+        paths = []
+        for f in files:
+            # some browsers send directories with full path, we just save
+            filename = os.path.basename(f.filename) or str(uuid.uuid4()) + '.xml'
+            dest = os.path.join(tmpdir, filename)
+            f.save(dest)
+            paths.append(dest)
+
+        validator = ValidadorFiscal()
+        events_index = validator.build_events_index(paths)
+
+        notas = []
+        for p in paths:
+            try:
+                tree = ET.parse(p)
+                root = tree.getroot()
+                is_nota = any(validator.limpar_tag(el.tag).lower() == 'infnfe' for el in root.iter())
+                if is_nota:
+                    try:
+                        dados = validator.extrair_dados_xml(p, tipo, events_index=events_index)
+                        notas.append(dados)
+                    except Exception:
+                        app.logger.exception('Erro extraindo dados de: %s', p)
+                        continue
+            except Exception:
+                app.logger.exception('Erro parseando XML: %s', p)
+                continue
+
+        # store and return id
+        key = str(uuid.uuid4())
+        STORE[key] = notas
+
+        # cleanup files
+        try:
+            shutil.rmtree(tmpdir)
+        except Exception:
+            app.logger.exception('Erro limpando tmpdir')
+
+        return jsonify({'id': key, 'count': len(notas), 'notas': notas})
+    except Exception as e:
+        app.logger.exception('Erro na rota /validate')
+        return jsonify({'error': 'Erro interno no servidor', 'detail': str(e)}), 500
 
 def build_excel_bytes(notas):
     # Build an Excel in memory similar to desktop exporter
