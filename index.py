@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify, send_file
-import tempfile, os, io, uuid
-from validadorXml.app import ValidadorFiscal
+import tempfile, os, io, uuid, shutil
 import xml.etree.ElementTree as ET
-import shutil
+
+# Importa a lógica do arquivo app.py que está na mesma pasta
+from app import ValidadorFiscal 
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Validador XML Fiscal</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background:#f7f8fb }
+        .container { max-width: 1000px; margin: auto; border: 1px solid #e3e6ea; padding: 20px; border-radius: 8px; background: #fff }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        .btn { background: #2196F3; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; }
+        .btn.green { background:#4CAF50 }
+        table { width:100%; border-collapse: collapse; }
+        table th, table td { border: 1px solid #eee; padding:8px; }
+        table thead th { background:#fafafa; text-align:left }
+        .small { font-size:12px; color:#666 }
+        .note-card { border:1px solid #eef2f6; padding:10px; border-radius:6px; margin-bottom:8px; background:#fcfdff }
+        .muted { color:#666 }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Validador de XML</h2>
+    <p>Selecione os arquivos XML (NF-e, NFC-e, etc.)</p>
+    
+    <!-- Permite selecionar diretório inteiro em navegadores compatíveis (Chrome, Edge) -->
+    <div style="text-align:center;">
+        <label for="xmlFiles" class="btn" style="cursor:pointer;display:inline-block">Selecionar pasta</label>
+        <!-- input oculto que aceita diretório -->
+        <input type="file" id="xmlFiles" multiple webkitdirectory directory accept=".xml" style="display:none;">
+    </div>
+    <br>
+    <br>
+    <button onclick="enviar()" class="btn">Validar Arquivos</button>
+
+    <h3>Resultado:</h3>
+    <div id="status" class="small muted"></div>
+    <div id="downloadArea"></div>
+    <div style="overflow:auto;margin-top:12px;">
+        <table id="resultTable" border="1" cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead style="background:#f4f4f4;">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Data</th>
+                    <th>Número</th>
+                    <th>Natureza de Operação</th>
+                    <th>Status</th>
+                    <th>Frete (R$)</th>
+                    <th>Impostos (R$)</th>
+                    <th>Total (R$)</th>
+                    <th>Produtos</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- linhas preenchidas via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function enviar() {
+    const fileInput = document.getElementById('xmlFiles');
+    // combine files from input (which supports folder selection) and any dropped files stored earlier
+    const files = fileInput.files || [];
+    if (files.length === 0) return alert("Selecione ao menos um arquivo ou arraste uma pasta");
+
+    const formData = new FormData();
+    // filter only .xml files and append; preserve relative path when available
+    for(let i=0; i < files.length; i++){
+        const f = files[i];
+        if (!f.name.toLowerCase().endsWith('.xml')) continue;
+        // use webkitRelativePath when available to keep folder structure in filename
+        const fname = (f.webkitRelativePath && f.webkitRelativePath !== '') ? f.webkitRelativePath : f.name;
+        formData.append('files', f, fname);
+    }
+    formData.append('tipo', 'NF-e');
+
+    document.getElementById('status').innerText = "Processando...";
+
+    try {
+        const res = await fetch('/validate', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        renderNotas(data.notas || []);
+        if(data.id) {
+            document.getElementById('downloadArea').innerHTML = `
+                <br><a href="/download/${data.id}"><button style="background: #4CAF50">Baixar Excel</button></a>
+            `;
+        }
+    } catch (err) {
+        document.getElementById('status').innerText = "Erro ao processar: " + err;
+    }
+}
+
+// UI: botão para selecionar pasta (label + input)
+const fileInput = document.getElementById('xmlFiles');
+fileInput.addEventListener('change', ()=>{
+    // show simple selected count
+    const c = fileInput.files ? fileInput.files.length : 0;
+    document.getElementById('status').innerText = c + ' arquivos prontos para envio.';
+});
+
+function renderNotas(notas) {
+    const tbody = document.querySelector('#resultTable tbody');
+    tbody.innerHTML = '';
+    if (!notas || notas.length === 0) {
+        document.getElementById('status').innerText = 'Nenhuma nota encontrada.';
+        return;
+    }
+    document.getElementById('status').innerText = notas.length + ' notas processadas.';
+
+    notas.forEach((nota, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(nota['Tipo']||'')}</td>
+            <td>${escapeHtml(nota['Data']||'')}</td>
+            <td>${escapeHtml(nota['Número']||'')}</td>
+            <td>${escapeHtml(nota['Natureza']||nota['Natureza de Operação']||'')}</td>
+            <td>${escapeHtml(nota['Status']||'')}</td>
+            <td style="text-align:right">${formatMoney(nota['Frete (R$)']||nota['Frete']||0)}</td>
+            <td style="text-align:right">${formatMoney(nota['Impostos (R$)']||nota['Impostos']||0)}</td>
+            <td style="text-align:right">${formatMoney(nota['Total (R$)']||nota['Total']||0)}</td>
+            <td style="text-align:center">
+                    <button data-idx="${idx}" data-count="${(nota['Produtos']||[]).length}" class="toggleProd btn small" style="background:#2196F3;color:#fff">Produtos (${(nota['Produtos']||[]).length})</button>
+                </td>
+        `;
+        tbody.appendChild(tr);
+
+        // products + details row (hidden)
+        const prodTr = document.createElement('tr');
+        prodTr.className = 'prod-row';
+        prodTr.style.display = 'none';
+        const prodTd = document.createElement('td');
+        prodTd.colSpan = 9;
+        prodTd.innerHTML = `<div class='note-card'>${buildProductsHtml(nota['Produtos']||[])}</div>`;
+        prodTr.appendChild(prodTd);
+        tbody.appendChild(prodTr);
+    });
+
+    // wire toggle buttons
+    document.querySelectorAll('.toggleProd').forEach(btn => {
+        btn.addEventListener('click', (e)=>{
+            const notaRow = btn.closest('tr');
+            const prodRow = notaRow.nextElementSibling;
+            if (!prodRow) return;
+            const isHidden = window.getComputedStyle(prodRow).display === 'none';
+            // show as table-row or hide
+            prodRow.style.display = isHidden ? 'table-row' : 'none';
+            // update label
+            btn.textContent = isHidden ? 'Ocultar produtos' : `Produtos (${btn.dataset.count})`;
+        });
+    });
+}
+
+function buildProductsHtml(produtos) {
+    // Display product data extracted from XML (without exposing XML tags)
+    if (!Array.isArray(produtos) || produtos.length === 0) return '<em>Sem produtos</em>';
+    let html = '<table style="width:100%;border-collapse:collapse;">';
+    html += '<thead><tr style="background:#fafafa"><th style="width:12%">Código</th><th>Produto</th><th style="width:10%">CFOP</th><th style="width:12%;text-align:right">Valor Produto</th><th style="width:12%;text-align:right">Imposto Produto</th></tr></thead>';
+    html += '<tbody>';
+    produtos.forEach((p, i) => {
+        const codigo = escapeHtml(p.codigo || '');
+        const desc = escapeHtml(p.descricao || '');
+        const cfop = escapeHtml(p.cfop || '');
+        const vprod = formatMoney(p.vProd || p['vProd'] || 0);
+        const imposto = formatMoney(p.imposto || 0);
+        html += `<tr>`+
+                `<td>${codigo}</td>`+
+                `<td>${desc}</td>`+
+                `<td>${cfop}</td>`+
+                `<td style="text-align:right">${vprod}</td>`+
+                `<td style="text-align:right">${imposto}</td>`+
+            `</tr>`;
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+function formatMoney(v){
+    try{ const n = parseFloat(v)||0; return n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); } catch(e){ return '' }
+}
+
+function escapeHtml(s){
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+}
+</script>
+
+</body>
+</html>
