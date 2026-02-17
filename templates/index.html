@@ -84,6 +84,10 @@ async function enviar() {
             body: formData
         });
 
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const data = await res.json();
         renderNotas(data.notas || []);
         if(data.id) {
