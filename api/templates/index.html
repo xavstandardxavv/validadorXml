@@ -1,51 +1,36 @@
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html>
+<head>
     <title>Validador XML</title>
-    <link rel="stylesheet" href="/static/style.css">
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1>Validador Fiscal</h1>
-        <p class="subtitle">Valide suas NF-e e eventos. Exporte para Excel.</p>
-      </header>
+</head>
+<body>
 
-      <form id="uploadForm">
-        <label>Tipo de Nota
-          <select name="tipo" id="tipo">
-            <option>NF-e</option>
-            <option>NFC-e</option>
-            <option>NFS-e</option>
-            <option>CT-e</option>
-            <option>MDF-e</option>
-          </select>
-        </label>
+<h2>Validador de XML</h2>
 
-        <label class="file">
-          Selecione arquivo(s) ou pasta (use escolher pasta se disponível)
-          <input type="file" id="files" name="files" multiple webkitdirectory directory>
-        </label>
+<input type="file" id="xmlFile">
+<button onclick="enviar()">Validar</button>
 
-        <div class="actions">
-          <button type="submit" id="btnValidate" class="btn primary">Validar</button>
-          <button type="button" id="btnDownload" class="btn" disabled>Baixar Excel</button>
-        </div>
-      </form>
+<pre id="resultado"></pre>
 
-      <main>
-        <div id="resultArea" class="result">
-          <p class="muted">Resultados aparecerão aqui após validação.</p>
-        </div>
-      </main>
+<script>
+async function enviar() {
+    const fileInput = document.getElementById('xmlFile');
+    const file = fileInput.files[0];
 
-      <footer>
-        <small>Validador simples — exporta Excel com agrupamento de produtos</small>
-      </footer>
-    </div>
+    const formData = new FormData();
+    formData.append('xml', file);
+    formData.append('tipo', 'NF-e');
 
-    <script src="/static/app.js"></script>
-  </body>
+    const res = await fetch('https://validadorxml.onrender.com', {
+        method: 'POST',
+        body: formData
+    });
+
+    const data = await res.json();
+    document.getElementById('resultado').innerText = JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
 </html>

@@ -143,4 +143,7 @@ def download(key):
     bio = build_excel_bytes(notas)
     return send_file(bio, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='notas.xlsx')
 
-app = app
+# exportação correta pro Vercel
+def handler(request):
+    return app(request.environ, lambda *args: None)
+
