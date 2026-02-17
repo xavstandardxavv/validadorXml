@@ -33,13 +33,31 @@ validator = ValidadorFiscal()
 
 from flask import render_template
 
-@app.route('/validar', methods=['POST'])
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/validate', methods=['POST'])
 def validar():
     try:
-        return render_template("index.html", resultado="Processado com sucesso")
-    
-    except Exception as e:
-        return render_template("index.html", resultado=f"Erro: {str(e)}")
+        arquivos = request.files.getlist('files')
+        notas = []
 
+        for arquivo in arquivos:
+            conteudo = arquivo.read()
+            dados = validator.extrair_dados_xml(conteudo, "NF-e")
+            notas.append(dados)
+
+        return jsonify({
+            "notas": notas
+        })
+
+    except Exception as e:
+        return jsonify({
+            "erro": str(e)
+        }), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
