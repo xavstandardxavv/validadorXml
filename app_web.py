@@ -41,15 +41,3 @@ def validar():
         return jsonify({"sucesso": False, "erro": str(e)}), 500
 
 
-@app.route('/validar', methods=['POST'])
-def validar():
-    file = request.files.get('xml')
-    tipo = request.form.get('tipo', 'NF-e')
-
-    if not file:
-        return jsonify({"erro": "Nenhum XML enviado"}), 400
-
-    xml_content = file.read()
-    dados = validator.extrair_dados_xml(xml_content, tipo)
-
-    return jsonify(dados)
