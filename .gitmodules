@@ -1,0 +1,3 @@
+[submodule "Validador/validadorXm"]
+	path = Validador/validadorXm
+	url = https://github.com/xavstandardxavv/validadorXml
