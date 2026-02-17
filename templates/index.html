@@ -18,43 +18,19 @@
     </style>
 </head>
 <body>
-    try {
-        const res = await fetch('/validate', {
-            method: 'POST',
-            body: formData
-        });
+    <div class="container">
+        <h2>Validador de XML</h2>
+        <p>Selecione os arquivos XML (NF-e, NFC-e, etc.)</p>
+        <div style="text-align:center;">
+            <label for="xmlFiles" class="btn" style="cursor:pointer;display:inline-block">Selecionar pasta</label>
+            <input type="file" id="xmlFiles" multiple webkitdirectory directory accept=".xml" style="display:none;">
+        </div>
+        <br>
+        <button onclick="enviar()" class="btn">Validar Arquivos</button>
 
-        if (!res.ok) {
-            // try to extract JSON error details
-            let errText = '';
-            try {
-                const errJson = await res.json();
-                errText = errJson.error || errJson.detail || JSON.stringify(errJson);
-            } catch(e) {
-                errText = await res.text();
-            }
-            document.getElementById('status').innerText = `Erro ${res.status}: ${errText}`;
-            document.getElementById('downloadArea').innerHTML = '';
-            renderNotas([]);
-            return;
-        }
-
-        const data = await res.json();
-        renderNotas(data.notas || []);
-        if(data.id) {
-            document.getElementById('downloadArea').innerHTML = `
-                <br><a href="/download/${data.id}"><button class="btn green">Baixar Excel</button></a>
-            `;
-        } else {
-            document.getElementById('downloadArea').innerHTML = '';
-        }
-    } catch (err) {
-        document.getElementById('status').innerText = "Erro ao processar: " + err;
-        document.getElementById('downloadArea').innerHTML = '';
-        renderNotas([]);
-    }
-    <div id="status" class="small muted"></div>
-    <div id="downloadArea"></div>
+        <br><br>
+        <div id="status" class="small muted"></div>
+        <div id="downloadArea"></div>
     <div style="overflow:auto;margin-top:12px;">
         <table id="resultTable" border="1" cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead style="background:#f4f4f4;">
