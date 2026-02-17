@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Validador XML</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Validador Fiscal</h1>
+        <p class="subtitle">Valide suas NF-e e eventos. Exporte para Excel.</p>
+      </header>
+
+      <form id="uploadForm">
+        <label>Tipo de Nota
+          <select name="tipo" id="tipo">
+            <option>NF-e</option>
+            <option>NFC-e</option>
+            <option>NFS-e</option>
+            <option>CT-e</option>
+            <option>MDF-e</option>
+          </select>
+        </label>
+
+        <label class="file">
+          Selecione arquivo(s) ou pasta (use escolher pasta se disponível)
+          <input type="file" id="files" name="files" multiple webkitdirectory directory>
+        </label>
+
+        <div class="actions">
+          <button type="submit" id="btnValidate" class="btn primary">Validar</button>
+          <button type="button" id="btnDownload" class="btn" disabled>Baixar Excel</button>
+        </div>
+      </form>
+
+      <main>
+        <div id="resultArea" class="result">
+          <p class="muted">Resultados aparecerão aqui após validação.</p>
+        </div>
+      </main>
+
+      <footer>
+        <small>Validador simples — exporta Excel com agrupamento de produtos</small>
+      </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
