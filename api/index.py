@@ -142,3 +142,5 @@ def download(key):
         return 'ID não encontrado', 404
     bio = build_excel_bytes(notas)
     return send_file(bio, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='notas.xlsx')
+
+app = app
