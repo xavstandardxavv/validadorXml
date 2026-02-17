@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import xml.etree.ElementTree as ET
+from flask import jsonify
+
 
 app = Flask(__name__)
 
@@ -29,9 +31,15 @@ class ValidadorFiscal:
 
 validator = ValidadorFiscal()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+@app.route('/validar', methods=['POST'])
+def validar():
+    try:
+        # sua lógica aqui
+        return jsonify({"sucesso": True, "mensagem": "Processado com sucesso"})
+    
+    except Exception as e:
+        return jsonify({"sucesso": False, "erro": str(e)}), 500
+
 
 @app.route('/validar', methods=['POST'])
 def validar():
