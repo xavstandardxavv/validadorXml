@@ -31,13 +31,15 @@ class ValidadorFiscal:
 
 validator = ValidadorFiscal()
 
+from flask import render_template
+
 @app.route('/validar', methods=['POST'])
 def validar():
     try:
-        # sua lógica aqui
-        return jsonify({"sucesso": True, "mensagem": "Processado com sucesso"})
+        return render_template("index.html", resultado="Processado com sucesso")
     
     except Exception as e:
-        return jsonify({"sucesso": False, "erro": str(e)}), 500
+        return render_template("index.html", resultado=f"Erro: {str(e)}")
+
 
 
