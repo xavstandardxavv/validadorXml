@@ -13,12 +13,8 @@ dist/
 env/
 venv/
 
-# Ignore arquivos de teste locais
-test_xml.py
-*.xml
-
 # Ignore arquivos antigos/duplicados
 app_web.py
-index.py
 run.py
-app_web.*
+test_xml.py
+index.py
