@@ -3,7 +3,7 @@ import tempfile, os, io, uuid, shutil
 import xml.etree.ElementTree as ET
 
 # Importa a lógica do arquivo app.py que está na mesma pasta
-from app import ValidadorFiscal 
+from validador_fiscal import ValidadorFiscal 
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
