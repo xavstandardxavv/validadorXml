@@ -146,8 +146,8 @@ def build_excel_bytes(notas):
                 total_autorizadas += float(nota.get('Total (R$)', nota.get('Total', 0.0) or 0.0))
         except:
             pass
-    worksheet.write(row_idx, 7, 'TOTAL AUTORIZADAS', header_format)
-    worksheet.write_number(row_idx, 6, total_autorizadas, money_fmt)
+    worksheet.write(row_idx, 6, 'TOTAL AUTORIZADAS', header_format)
+    worksheet.write_number(row_idx, 7, total_autorizadas, money_fmt)
 
     workbook.close()
     output.seek(0)
