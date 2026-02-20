@@ -1,17 +1,65 @@
+"""validador_fiscal
+===================
+
+Módulo de extração e formatação de dados fiscais a partir de arquivos
+XML de notas fiscais (NFe, NFCe, NFS-e, CT-e, MDF-e).
+
+Este módulo implementa a classe ValidadorFiscal, que fornece métodos
+para parsear XMLs, extrair campos relevantes (número, data, totais,
+produtos, chave de acesso), construir um índice de eventos (por exemplo
+cancelamentos) e gerar relatórios simples. A lógica de exportação para
+Excel e PDF está implementada, mas atualmente usa diálogos GUI para
+seleção de arquivo; em servidores headless estes métodos devem ser
+refatorados para receber um caminho como argumento.
+
+Responsável: Gustavo Andrade
+Última revisão: 2026-02-20
+"""
+
 import xml.etree.ElementTree as ET
 import pandas as pd
 from fpdf import FPDF
 from datetime import datetime
 
 class ValidadorFiscal:
+    """Classe principal para extração e formatação de informações fiscais.
+
+    Atributos:
+        dados_extracao (list|dict): resultado(s) da extração. Pode ser uma
+            lista de dicionários (várias notas) ou um dicionário único.
+    """
+
     def __init__(self):
         # Pode armazenar um único dicionário (último arquivo) ou uma lista de dicionários (vários arquivos)
         self.dados_extracao = []
 
     def limpar_tag(self, tag):
+        """Remove namespace XML de uma tag e retorna apenas o nome.
+
+        Exemplo: "{http://...}xProd" -> "xProd".
+
+        Args:
+            tag (str): nome da tag possivelmente com namespace.
+
+        Returns:
+            str: nome da tag sem namespace.
+        """
         return tag.split('}', 1)[1] if '}' in tag else tag
 
     def buscar_valor(self, root, tags):
+        """Busca o primeiro valor de uma lista de tags dentro de um elemento XML.
+
+        A busca é case-insensitive e ignora namespace. Percorre todo o
+        escopo de `root` e retorna o texto do primeiro elemento que casar
+        com qualquer uma das tags fornecidas.
+
+        Args:
+            root (xml.etree.ElementTree.Element): nó raiz onde pesquisar.
+            tags (list[str]): nomes de tags candidatas (ex.: ['nNF','Numero']).
+
+        Returns:
+            str: texto do elemento encontrado ou '0.00' se não encontrar.
+        """
         tags_lower = [t.lower() for t in tags]
         for elemento in root.iter():
             if self.limpar_tag(elemento.tag).lower() in tags_lower:
@@ -19,6 +67,20 @@ class ValidadorFiscal:
         return "0.00"
 
     def processar_xml(self, caminho, tipo):
+        """Processa um arquivo XML e retorna um relatório textual.
+
+        Este método é uma função de conveniência usada em interfaces
+        desktop: chama `extrair_dados_xml`, armazena o resultado em
+        `self.dados_extracao` e devolve uma string formatada. Em caso de
+        erro, captura a exceção e retorna uma string de erro.
+
+        Args:
+            caminho (str): caminho para o arquivo XML.
+            tipo (str): tipo de nota (ex.: 'NF-e').
+
+        Returns:
+            str: relatório formatado ou mensagem de erro.
+        """
         # Mantido para compatibilidade: processa um arquivo e guarda como único dicionário
         try:
             dados = self.extrair_dados_xml(caminho, tipo)
@@ -29,6 +91,23 @@ class ValidadorFiscal:
             return f"Erro: {e}"
 
     def extrair_dados_xml(self, caminho, tipo, events_index=None):
+        """Extrai campos relevantes de um arquivo XML de nota fiscal.
+
+        Analisa o XML em `caminho` e extrai número, data, totais,
+        natureza, chave de acesso, status (usando opcionalmente
+        `events_index`) e lista de produtos. O retorno é um dicionário
+        pronto para uso pela camada de apresentação ou exportação.
+
+        Args:
+            caminho (str): caminho para o arquivo XML da nota.
+            tipo (str): tipo de nota (ex.: 'NF-e').
+            events_index (dict, opcional): índice de eventos para determinar
+                status (ex.: cancelamentos) no formato {chave: [eventos]}.
+
+        Returns:
+            dict: dicionário com as chaves: Tipo, Número, Data, Frete (R$),
+                  Impostos (R$), Total (R$), Natureza, Chave, Status, Produtos.
+        """
         # Retorna um dicionário com os campos extraídos do XML (nota)
         tree = ET.parse(caminho)
         root = tree.getroot()
@@ -175,10 +254,27 @@ class ValidadorFiscal:
                 continue
         return index
 
-    def exportar_excel(self):
+    def exportar_excel(self, caminho=None):
+        """Exporta os dados atualmente carregados para um arquivo Excel.
+
+        Se `caminho` não for fornecido, a função tenta abrir um diálogo
+        GUI para seleção de arquivo. Em ambientes headless, forneça o
+        parâmetro `caminho` explicitamente; caso contrário, será levantado
+        um RuntimeError.
+        """
         if not self.dados_extracao:
             return
-        caminho = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")])
+        show_msg = lambda *a, **k: None
+        show_err = lambda *a, **k: None
+        if not caminho:
+            try:
+                import tkinter as _tk
+                from tkinter import filedialog as _filedialog, messagebox as _messagebox
+                caminho = _filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx")])
+                show_msg = _messagebox.showinfo
+                show_err = _messagebox.showerror
+            except Exception:
+                raise RuntimeError("Ambiente sem GUI: forneça o parâmetro 'caminho' para exportar_excel")
         if not caminho:
             return
 
@@ -304,14 +400,32 @@ class ValidadorFiscal:
                 worksheet.set_column(10, 10, 10)
                 worksheet.set_column(11, 12, 14)
 
-            messagebox.showinfo("Sucesso", "Excel gerado com sucesso!")
+            show_msg("Sucesso", "Excel gerado com sucesso!")
         except Exception as e:
-            messagebox.showerror('Erro', f'Falha ao gerar Excel: {e}')
+            show_err('Erro', f'Falha ao gerar Excel: {e}')
 
-    def exportar_pdf(self):
-        if not self.dados_extracao: return
-        caminho = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
-        if caminho:
+    def exportar_pdf(self, caminho=None):
+        """Exporta os dados atualmente carregados para PDF.
+
+        Se `caminho` não for fornecido, a função tentará abrir um diálogo
+        GUI. Em ambientes sem GUI, forneça `caminho` explicitamente.
+        """
+        if not self.dados_extracao:
+            return
+        show_msg = lambda *a, **k: None
+        show_err = lambda *a, **k: None
+        if not caminho:
+            try:
+                import tkinter as _tk
+                from tkinter import filedialog as _filedialog, messagebox as _messagebox
+                caminho = _filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
+                show_msg = _messagebox.showinfo
+                show_err = _messagebox.showerror
+            except Exception:
+                raise RuntimeError("Ambiente sem GUI: forneça o parâmetro 'caminho' para exportar_pdf")
+        if not caminho:
+            return
+        try:
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
@@ -332,4 +446,6 @@ class ValidadorFiscal:
                 for chave, valor in self.dados_extracao.items():
                     pdf.cell(200, 10, txt=f"{chave}: {valor}", ln=True)
             pdf.output(caminho)
-            # messagebox.showinfo("Sucesso", "PDF gerado com sucesso!")
+            show_msg("Sucesso", "PDF gerado com sucesso!")
+        except Exception as e:
+            show_err('Erro', f'Falha ao gerar PDF: {e}')

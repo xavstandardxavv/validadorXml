@@ -1,0 +1,107 @@
+VALIDADOR_FISCAL - Documentação
+
+Arquivo: validador_fiscal.py
+Propósito:
+- Fornecer lógica de extração e formatação de informações fiscais a partir de arquivos XML de notas fiscais eletrônicas (NFe, NFCe, NFS-e, CT-e, MDF-e).
+- Construir índices de eventos (cancelamentos, etc.) a partir de XMLs auxiliares.
+- Gerar relatórios textuais e possibilidades de exportação para Excel/PDF (por implementação original).
+
+Dependências (ver requirements.txt):
+- pandas
+- xlsxwriter (usado via pandas ExcelWriter)
+- fpdf2 (importado como FPDF)
+- python-dateutil (se utilizado em outra parte do projeto)
+- Nota: tkinter foi removido da importação principal para compatibilidade com execução em servidores headless (Render). Funções que dependiam de filedialog/messagebox exigem GUI local ou ajustes.
+
+Classe principal: ValidadorFiscal
+
+Construtor
+- __init__(self)
+  - Inicializa self.dados_extracao (lista ou dicionário) para armazenar o(s) resultado(s) da extração.
+
+Métodos públicos e comportamento
+
+- limpar_tag(self, tag) -> str
+  - Remove namespace XML (parte antes de '}' quando existente) e retorna apenas o nome da tag.
+  - Uso interno para normalizar tags como '{http://..}xProd' -> 'xProd'.
+
+- buscar_valor(self, root, tags) -> str
+  - Percorre todos os elementos dentro de 'root' (ElementTree.Element) e tenta encontrar o primeiro elemento cuja tag, limpa e em lowercase, esteja na lista de 'tags' (comparação case-insensitive).
+  - Retorna elemento.text ou '0.00' quando não encontrado.
+  - Exemplo: buscar_valor(root, ['nNF','Numero'])
+
+- processar_xml(self, caminho, tipo) -> str
+  - Conveniência para processar um único arquivo XML, armazenar o resultado em self.dados_extracao (lista com um item) e retornar um relatório formatado (string gerada por formatar_relatorio_texto).
+  - Captura exceções e retorna 'Erro: ...' em caso de falha.
+
+- extrair_dados_xml(self, caminho, tipo, events_index=None) -> dict
+  - Método central: parseia o XML no caminho informado e extrai campos relevantes:
+    - Número (nNF / Numero / numNota / nCT / nMDF)
+    - Data (dhEmi / DataEmissao / dEmi / dhEmiS) - apresenta apenas os primeiros 10 caracteres (YYYY-MM-DD) quando disponível
+    - Valores monetários: vNF/vServ/vLiquido/vProd/vTPrest, vFrete, vTotTrib/vICMS/vISS/vTot
+    - Natureza da operação (natOp / natureza)
+    - Chave de acesso: tenta extrair de atributo Id/ID do nó infNFe (removendo prefixo 'NFe'), ou da tag chNFe/chave
+    - Status: por padrão 'Autorizada'; se fornecido events_index (dict chave->lista de eventos), verifica eventos de cancelamento (tpEvento '110111' ou texto contendo 'cancelamento'/'cancelado') e marca 'Cancelado' quando detectado.
+    - Produtos: percorre elementos 'det' e procura filho 'prod' para extrair 'xProd'/'descr'/'descricao', 'cProd'/'codigo', 'CFOP', 'vProd' e soma de impostos por tags internas (vICMS, vIPI, vPIS, vCOFINS, vII, vST).
+  - Retorna um dicionário com chaves: Tipo, Número, Data, Frete (R$), Impostos (R$), Total (R$), Natureza, Chave, Status, Produtos (lista de dicts: descricao, codigo, cfop, vProd, imposto).
+
+- formatar_relatorio_texto(self, d) -> str
+  - Gera uma string de relatório curto a partir do dicionário de nota (usado por processar_xml).
+
+- build_events_index(self, file_paths) -> dict
+  - Recebe uma lista de caminhos de arquivos XML (tipicamente arquivos de eventos) e constrói um índice: chave_de_acesso -> lista de dicionários com {tpEvento, xEvento, root} para consulta posterior.
+  - Usa heurísticas para localizar chNFe, tpEvento e xEvento em diferentes níveis do XML.
+
+- exportar_excel(self)
+  - Implementação original gera um arquivo .xlsx com pandas.ExcelWriter + xlsxwriter, escrevendo notas e produtos com outline levels (agrupar produtos sob cada nota) e total de notas autorizadas.
+  - ATENÇÃO: Esta função chama 'filedialog.asksaveasfilename' e 'messagebox' (GUI). Em ambientes sem GUI (como Render) estas chamadas falham. Foi tomada ação para remover execuções automáticas de GUI, porém se for necessário gerar Excel no servidor, recomenda-se refatorar a função para receber um caminho de destino (string) ao invés de usar filedialog, e para não usar messagebox para relatar sucesso/erro (usar logs/retornos/exceções).
+
+- exportar_pdf(self)
+  - Gera PDF usando FPDF (fpdf2) com um relatório das notas em self.dados_extracao.
+  - Também utiliza filedialog/messagebox na implementação atual. Para uso em servidor, refatorar para aceitar caminho como argumento e retornar sucesso/erro sem GUI.
+
+Formato de retorno (extrair_dados_xml)
+- Exemplo de retorno:
+{
+  'Tipo': 'NF-e',
+  'Número': '12345',
+  'Data': '2024-12-31',
+  'Frete (R$)': 0.0,
+  'Impostos (R$)': 123.45,
+  'Total (R$)': 1000.00,
+  'Natureza': 'Venda',
+  'Chave': '12345678901234567890123456789012345678901234',
+  'Status': 'Autorizada',
+  'Produtos': [
+     {'descricao':'Produto A','codigo':'001','cfop':'5102','vProd':500.0,'imposto':50.0},
+     ...
+  ]
+}
+
+Observações e recomendações
+- Em ambientes de produção/servidores (ex.: Render), evitar código que importe ou execute tkinter. O projeto já teve a GUI removida do fluxo principal para compatibilidade.
+- As funções de exportação que dependem de filedialog/messagebox devem ser refatoradas para uso sem GUI (aceitar parâmetros de caminho e usar logs/retornos/erros em vez de popups).
+- A função buscar_valor faz comparações case-insensitive e remove namespaces, o que torna a extração mais resiliente a variações de tags (ex.: xProd, XProd, {ns}xProd).
+- Teste com um conjunto representativo de XMLs locais e também valide com XMLs de eventos (para detectar cancelamentos) fornecendo o índice via build_events_index.
+
+Histórico de mudanças relevantes (no repositório atual):
+- Removida execução automática da interface Tkinter para compatibilidade com Render (commit: "Remover interface Tkinter para compatibilidade com Render").
+- Adicionado fpdf2 às dependências para geração de PDF em ambiente de servidor (commit: "Adicionar fpdf2 ao requirements.txt").
+
+Exemplos de uso (Python interactive / script):
+from validador_fiscal import ValidadorFiscal
+validator = ValidadorFiscal()
+nota = validator.extrair_dados_xml('caminho/para/nfe.xml', 'NF-e')
+print(nota['Número'], nota['Total (R$)'])
+
+# Construir índice de eventos e usar para determinar status
+events_idx = validator.build_events_index(['eventos/ev1.xml','eventos/ev2.xml'])
+nota = validator.extrair_dados_xml('nfe.xml', 'NF-e', events_index=events_idx)
+
+Recomendações para CI/Deploy
+- Assegurar que requirements.txt contém as dependências necessárias (fpdf2, pandas, xlsxwriter, flask, gunicorn, etc.).
+- Em produção, remover ou adaptar qualquer código que invoque GUI (filedialog/messagebox). Preferir APIs que recebem caminhos/bytes e retornam resultados ou lançam exceções.
+
+Arquivo gerado automaticamente em: validadorXml/VALIDADOR_FISCAL_DOC.txt
+
+Fim.

@@ -1,0 +1,113 @@
+DOCUMENTAÇÃO PROFISSIONAL - Validador XML
+=========================================
+
+1) Visão Geral
+---------------
+Projeto: Validador XML
+Autor/Responsável: Gustavo Andrade
+Objetivo: Extrair, validar e preparar relatórios de notas fiscais eletrônicas a partir de arquivos XML. Fornece mecanismo de identificação de notas, extração de campos relevantes (número, data, totais, produtos, chave de acesso), construção de índice de eventos (ex.: cancelamento) e exportação para Excel/PDF.
+
+2) Escopo do Documento
+----------------------
+Esta documentação cobre:
+- Arquitetura do módulo `validador_fiscal.py`.
+- API pública (métodos públicos, assinaturas, comportamentos e retornos).
+- Dependências e instruções de instalação.
+- Como executar localmente e em produção (Render).
+- Testes básicos e recomendações de validação.
+- Boas práticas e notas de segurança.
+- Contato e histórico de alterações.
+
+3) Estrutura do Código
+----------------------
+Arquivo principal: `validador_fiscal.py`
+- Classe: `ValidadorFiscal`
+  - Atributos
+    - `dados_extracao`: lista ou dicionário com resultado(s) da extração.
+  - Métodos públicos:
+    - `limpar_tag(tag) -> str`
+    - `buscar_valor(root, tags) -> str`
+    - `processar_xml(caminho, tipo) -> str`
+    - `extrair_dados_xml(caminho, tipo, events_index=None) -> dict`
+    - `formatar_relatorio_texto(d) -> str`
+    - `build_events_index(file_paths) -> dict`
+    - `exportar_excel(caminho=None)`
+    - `exportar_pdf(caminho=None)`
+
+4) API - Descrição e exemplos
+----------------------------
+- `ValidadorFiscal()`
+  - Cria uma instância do validador.
+
+- `extrair_dados_xml(caminho, tipo, events_index=None)`
+  - Entrada: caminho do arquivo XML, tipo da nota (ex.: 'NF-e'), events_index opcional.
+  - Saída: dicionário com chaves: Tipo, Número, Data, Frete (R$), Impostos (R$), Total (R$), Natureza, Chave, Status, Produtos.
+  - Exemplo:
+    from validador_fiscal import ValidadorFiscal
+    v = ValidadorFiscal()
+    resultado = v.extrair_dados_xml('nfe.xml', 'NF-e')
+
+- `build_events_index(file_paths)`
+  - Constrói índice para detectar cancelamentos e outros eventos.
+
+- `exportar_excel(caminho=None)` / `exportar_pdf(caminho=None)`
+  - Se `caminho` for None, a função tentará abrir diálogo GUI. Em servidores sem GUI (ex.: Render), chame a função com `caminho` definido.
+
+5) Dependências
+----------------
+Listadas em `requirements.txt`. Versões essenciais:
+- flask==3.0.0
+- gunicorn==21.2.0
+- pandas==3.0.0
+- xlsxwriter==3.2.9
+- fpdf2==2.7.0
+
+6) Instalação e execução local
+-----------------------------
+1. Criar virtualenv e ativar.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+.venv\Scripts\activate     # Windows (PowerShell)
+pip install -r requirements.txt
+```
+
+2. Executar aplicação Flask local (exemplo):
+
+```bash
+python app.py
+```
+
+3. Em produção (Render): garantir `Procfile` ou `render.yaml` com:
+
+```
+gunicorn --bind 0.0.0.0:$PORT app:app
+```
+
+7) Testes e verificação
+-----------------------
+- Teste unitário manual: usar um conjunto de XMLs de exemplo e executar `extrair_dados_xml`.
+- Validar campos principais: Número, Data (YYYY-MM-DD), Total, Produtos, Chave.
+- Testar `build_events_index` com XMLs de eventos para garantir detecção de cancelamentos.
+
+8) Notas de implantação / CI
+---------------------------
+- Incluir `fpdf2` em `requirements.txt` para geração de PDF.
+- Garantir que código que dependa de GUI seja adaptado para headless (já realizado: import de tkinter foi removido do fluxo principal e as funções de exportação aceitam `caminho`).
+
+9) Segurança e privacidade
+--------------------------
+- Os arquivos XML podem conter dados sensíveis (CNPJ, CPF, valores). Certifique-se de proteger o armazenamento e o transporte dos arquivos.
+- Em ambientes compartilhados, não persistir `dados_extracao` em locais públicos ou logs.
+
+10) Manutenção e contatos
+-------------------------
+- Autor/Contato: Gustavo Andrade
+- Repositório: https://github.com/xavstandardxavv/validadorXml
+
+11) Histórico de alterações (resumo)
+-----------------------------------
+- 2026-02-20: Remoção de execução automática da interface Tkinter e adaptação das funções de exportação para suportar execução headless; adição de `fpdf2` nas dependências; documentação profissional adicionada.
+
+Fim do documento.
