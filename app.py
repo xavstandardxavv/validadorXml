@@ -154,3 +154,7 @@ def download(key):
     bio = build_excel_bytes(notas)
     return send_file(bio, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='notas.xlsx')
 
+
+if __name__ == '__main__':
+    # Para desenvolvimento local
+    app.run(debug=True, host='0.0.0.0', port=5000)
