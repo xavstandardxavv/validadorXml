@@ -1,0 +1,24 @@
+# Ignore arquivos de build e desenvolvimento locais
+*.pyc
+__pycache__/
+*.pyo
+*.pot
+*.log
+build/
+dist/
+*.egg-info/
+.DS_Store
+.env
+.venv
+env/
+venv/
+
+# Ignore arquivos de teste locais
+test_xml.py
+*.xml
+
+# Ignore arquivos antigos/duplicados
+app_web.py
+index.py
+run.py
+app_web.*
