@@ -32,6 +32,7 @@ def validate():
             f.save(dest)
             paths.append(dest)
 
+        app.logger.info(f'Processando {len(paths)} arquivos')
         validator = ValidadorFiscal()
         events_index = validator.build_events_index(paths)
 
@@ -44,17 +45,23 @@ def validate():
                 if is_nota:
                     try:
                         dados = validator.extrair_dados_xml(p, tipo, events_index=events_index)
-                        notas.append(dados)
-                    except Exception:
-                        app.logger.exception('Erro extraindo dados de: %s', p)
+                        # Validar que temos dados mínimos
+                        if dados.get('Número') and dados.get('Número') != '0.00':
+                            notas.append(dados)
+                            app.logger.info(f"Nota processada: {dados.get('Número')}")
+                        else:
+                            app.logger.warning(f'Nota sem número em: {p}')
+                    except Exception as e:
+                        app.logger.exception(f'Erro extraindo dados de: {p}')
                         continue
-            except Exception:
-                app.logger.exception('Erro parseando XML: %s', p)
+            except Exception as e:
+                app.logger.exception(f'Erro parseando XML: {p}')
                 continue
 
         # store and return id
         key = str(uuid.uuid4())
         STORE[key] = notas
+        app.logger.info(f'Stored {len(notas)} notas with key: {key}')
 
         # cleanup files
         try:

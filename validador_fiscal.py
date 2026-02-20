@@ -14,9 +14,10 @@ class ValidadorFiscal:
         return tag.split('}', 1)[1] if '}' in tag else tag
 
     def buscar_valor(self, root, tags):
+        tags_lower = [t.lower() for t in tags]
         for elemento in root.iter():
-            if self.limpar_tag(elemento.tag) in tags:
-                return elemento.text
+            if self.limpar_tag(elemento.tag).lower() in tags_lower:
+                return elemento.text or "0.00"
         return "0.00"
 
     def processar_xml(self, caminho, tipo):
@@ -89,7 +90,7 @@ class ValidadorFiscal:
 
         # Extrair lista de produtos (det/prod)
         produtos = []
-        for det in root.findall('.//'):
+        for det in root.iter():
             # procurar elementos 'det' que contenham 'prod'
             if self.limpar_tag(det.tag).lower() == 'det':
                 prod_el = None
@@ -111,7 +112,7 @@ class ValidadorFiscal:
                     val = None
                     # busca no nó 'det' inteiro por essas tags
                     for el in det.iter():
-                        if self.limpar_tag(el.tag) == tag and el.text:
+                        if self.limpar_tag(el.tag).lower() == tag.lower() and el.text:
                             try:
                                 imposto_total += float(el.text.replace(',', '.'))
                             except:
@@ -127,7 +128,7 @@ class ValidadorFiscal:
         dados = {
             "Tipo": tipo,
             "Número": numero,
-            "Data": data[:10] if data else "N/A",
+            "Data": data[:10] if data and data != '0.00' else "N/A",
             "Frete (R$)": to_float_safe(v_frete),
             "Impostos (R$)": to_float_safe(v_imp),
             "Total (R$)": to_float_safe(v_nota),
