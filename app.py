@@ -2,12 +2,10 @@ from flask import Flask, render_template, request, jsonify, send_file
 import tempfile, os, io, uuid, shutil
 import xml.etree.ElementTree as ET
 
-# Importa a lógica do arquivo app.py que está na mesma pasta
 from validador_fiscal import ValidadorFiscal 
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# In-memory store for processed results: id -> notas list
 STORE = {}
 
 @app.route('/')
@@ -26,7 +24,6 @@ def validate():
         tmpdir = tempfile.mkdtemp(prefix='val_')
         paths = []
         for f in files:
-            # some browsers send directories with full path, we just save
             filename = os.path.basename(f.filename) or str(uuid.uuid4()) + '.xml'
             dest = os.path.join(tmpdir, filename)
             f.save(dest)
@@ -45,7 +42,6 @@ def validate():
                 if is_nota:
                     try:
                         dados = validator.extrair_dados_xml(p, tipo, events_index=events_index)
-                        # Validar que temos dados mínimos
                         if dados.get('Número') and dados.get('Número') != '0.00':
                             notas.append(dados)
                             app.logger.info(f"Nota processada: {dados.get('Número')}")
@@ -58,12 +54,10 @@ def validate():
                 app.logger.exception(f'Erro parseando XML: {p}')
                 continue
 
-        # store and return id
         key = str(uuid.uuid4())
         STORE[key] = notas
         app.logger.info(f'Stored {len(notas)} notas with key: {key}')
 
-        # cleanup files
         try:
             shutil.rmtree(tmpdir)
         except Exception:
@@ -75,7 +69,6 @@ def validate():
         return jsonify({'error': 'Erro interno no servidor', 'detail': str(e)}), 500
 
 def build_excel_bytes(notas):
-    # Build an Excel in memory similar to desktop exporter
     import xlsxwriter
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output, {'in_memory': True})
@@ -138,7 +131,6 @@ def build_excel_bytes(notas):
             worksheet.set_row(row_idx, None, None, {'level': lvl, 'collapsed': True})
         row_idx += 1
 
-    # total authorized
     total_autorizadas = 0.0
     for nota in notas:
         try:
