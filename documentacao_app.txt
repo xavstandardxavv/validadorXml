@@ -1,0 +1,34 @@
+Esse arquivo é o backend principal da aplicação web usando Flask.
+
+O que faz:
+- Recebe arquivos XML enviados pelo usuário
+- Processa esses arquivos usando a classe ValidadorFiscal
+- Retorna os dados processados em JSON
+- Permite baixar os dados em formato Excel
+
+Principais partes:
+
+1. Inicialização:
+Cria uma aplicação Flask e define pastas de templates e arquivos estáticos.
+
+2. Rota "/":
+Renderiza a página principal (index.html).
+
+3. Rota "/validate":
+- Recebe arquivos via POST
+- Salva temporariamente
+- Processa cada XML
+- Extrai dados das notas fiscais
+- Retorna os dados em formato JSON
+
+4. Função build_excel_bytes:
+- Gera um arquivo Excel em memória
+- Organiza dados das notas e produtos
+- Aplica a formatação 
+
+5. Rota "/download/<key>":
+- Permite baixar o Excel gerado
+
+6. Armazenamento:
+- Usa um dicionário em memória (STORE) para guardar resultados
+

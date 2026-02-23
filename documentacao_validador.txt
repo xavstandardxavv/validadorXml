@@ -1,0 +1,42 @@
+Arquivo contém a lógica principal de processamento dos XMLs de notas fiscais.
+
+Classe principal:
+ValidadorFiscal
+
+O que faz:
+- Lê arquivos XML
+- Extrai informações importantes das notas
+- Organiza os dados para uso posterior
+
+Principais métodos:
+
+1. limpar_tag:
+Remove o namespace das tags XML.
+
+2. buscar_valor:
+Procura valores dentro do XML com base em possíveis nomes de tags.
+
+3. extrair_dados_xml:
+- Método principal
+- Extrai:
+  - Número da nota
+  - Data
+  - Valores (total, frete, impostos)
+  - Natureza da operação
+  - Status (ex: cancelado)
+  - Produtos
+
+4. build_events_index:
+- Cria um índice de eventos (como cancelamentos)
+- Ajuda a identificar o status da nota
+
+5. formatar_relatorio_texto:
+Gera um relatório simples em texto.
+
+6. exportar_excel:
+- Exporta os dados para Excel
+- Usa pandas e xlsxwriter
+
+7. exportar_pdf:
+- Exporta os dados para PDF
+- Usa a biblioteca FPDF
