@@ -35,7 +35,15 @@ class ValidadorFiscal:
         data = self.buscar_valor(root, ['dhEmi', 'DataEmissao', 'dEmi', 'dhEmiS'])
         v_nota = self.buscar_valor(root, ['vNF', 'vServ', 'vLiquido', 'vTPrest'])
         v_frete = self.buscar_valor(root, ['vFrete', 'vFreteT'])
-        v_imp = self.buscar_valor(root, ['vTotTrib', 'vICMS', 'vISS', 'vTot'])
+        v_imp = "0.00"
+        for total in root.iter():
+            if self.limpar_tag(total.tag).lower() == 'total':
+                for icmsTot in total:
+                    if self.limpar_tag(icmsTot.tag).lower() == 'icmstot':
+                        for el in icmsTot:
+                            if self.limpar_tag(el.tag).lower() == 'vtottrib' and el.text:
+                                v_imp = el.text
+                                break
         natureza = self.buscar_valor(root, ['natOp', 'natureza'])
 
         chave = None
