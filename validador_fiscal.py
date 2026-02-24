@@ -33,7 +33,7 @@ class ValidadorFiscal:
 
         numero = self.buscar_valor(root, ['nNF', 'Numero', 'numNota', 'nCT', 'nMDF'])
         data = self.buscar_valor(root, ['dhEmi', 'DataEmissao', 'dEmi', 'dhEmiS'])
-        v_nota = self.buscar_valor(root, ['vNF', 'vServ', 'vLiquido', 'vProd', 'vTPrest'])
+        v_nota = self.buscar_valor(root, ['vNF', 'vServ', 'vLiquido', 'vTPrest'])
         v_frete = self.buscar_valor(root, ['vFrete', 'vFreteT'])
         v_imp = self.buscar_valor(root, ['vTotTrib', 'vICMS', 'vISS', 'vTot'])
         natureza = self.buscar_valor(root, ['natOp', 'natureza'])
